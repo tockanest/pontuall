@@ -1,0 +1,145 @@
+@import '@radix-ui/colors/black-alpha.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 240 0% 0%; /* Midnight background */
+        --foreground: 60 0% 100%; /* White foreground */
+        --primary: 240 0% 90%; /* Light blue primary */
+        --primary-foreground: 60 0% 0%; /* Dark text for primary */
+        --secondary: 240 4% 15%; /* Dark secondary */
+        --secondary-foreground: 60 5% 85%; /* Light text for secondary */
+        --accent: 240 0% 13%; /* Dark accent */
+        --accent-foreground: 60 0% 100%; /* White text for accent */
+        --destructive: 0 60% 50%; /* Destructive color */
+        --destructive-foreground: 0 0% 98%; /* Light text for destructive */
+        --muted: 240 5% 25%; /* Muted color */
+        --muted-foreground: 60 5% 85%; /* Light text for muted */
+        --card: 240 4% 10%; /* Card background */
+        --card-foreground: 60 5% 90%; /* Light text for card */
+        --popover: 240 5% 15%; /* Popover background */
+        --popover-foreground: 60 5% 85%; /* Light text for popover */
+        --border: 240 6% 20%; /* Border color */
+        --input: 240 6% 20%; /* Input background */
+        --ring: 240 5% 90%; /* Ring color */
+        --radius: 0.5rem; /* Border radius */
+    }
+}
+
+/* DeepSea theme */
+@layer base {
+    :root[data-theme='deepsea'] {
+        --background: 210 100% 6%;
+        --foreground: 180 100% 90%;
+        --primary: 200 100% 28%;
+        --primary-foreground: 180 100% 90%;
+        --secondary: 203 23% 30%;
+        --secondary-foreground: 180 100% 90%;
+        --accent: 198 70% 50%;
+        --accent-foreground: 185 10% 13%;
+        --destructive: 0 98% 44%;
+        --destructive-foreground: 0 0% 100%;
+        --muted: 200 50% 30%;
+        --muted-foreground: 180 100% 90%;
+        --card: 210 100% 12%;
+        --card-foreground: 180 100% 90%;
+        --popover: 210 100% 15%;
+        --popover-foreground: 180 100% 90%;
+        --border: 210 50% 40%;
+        --input: 210 50% 40%;
+        --ring: 180 100% 90%;
+        --radius: 0rem;
+    }
+}
+
+@layer base {
+    :root[data-theme='daylight'] {
+        --background: 0 0% 100%;
+        --foreground: 240 10% 3.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 240 10% 3.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 240 10% 3.9%;
+        --primary: 240 5.9% 10%;
+        --primary-foreground: 0 0% 98%;
+        --secondary: 240 4.8% 95.9%;
+        --secondary-foreground: 240 5.9% 10%;
+        --muted: 240 4.8% 95.9%;
+        --muted-foreground: 240 3.8% 45%;
+        --accent: 240 4.8% 95.9%;
+        --accent-foreground: 240 5.9% 10%;
+        --destructive: 0 72% 51%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 5.9% 90%;
+        --input: 240 5.9% 90%;
+        --ring: 240 5.9% 10%;
+        --radius: 0.5rem;
+    }
+}
+
+@layer base {
+    :root[data-theme='pastel'] {
+        --background: 210 100% 97%;
+        --foreground: 339 20% 20%;
+        --primary: 308 56% 85%;
+        --primary-foreground: 210 22% 22%;
+        --secondary: 196 75% 88%;
+        --secondary-foreground: 210 22% 22%;
+        --accent: 211 86% 70%;
+        --accent-foreground: 210 22% 22%;
+        --destructive: 0 93% 73%;
+        --destructive-foreground: 210 22% 22%;
+        --muted: 210 100% 95%;
+        --muted-foreground: 210 22% 22%;
+        --card: 210 100% 97%;
+        --card-foreground: 210 22% 22%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 341 20% 22%;
+        --border: 210 40% 80%;
+        --input: 210 40% 56%;
+        --ring: 210 40% 60%;
+        --radius: 1rem;
+    }
+}
+
+/* Scrollbar */
+@layer base {
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px !important;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background-color: hsl(var(--foreground) / 0.5);
+        border-radius: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background-color: hsl(var(--foreground) / 0.6);
+    }
+
+    ::-webkit-scrollbar-track {
+        background-color: hsl(var(--background) / 0.5);
+    }
+
+    ::-webkit-scrollbar-corner {
+        background-color: hsl(var(--background) / 0.5);
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground font-body;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        @apply font-heading;
+    }
+}
