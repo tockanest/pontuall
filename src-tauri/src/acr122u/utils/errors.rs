@@ -1,8 +1,8 @@
 use std::fmt;
 
 use pcsc::Error;
-use serde::{Serialize, Serializer};
 use serde::ser::SerializeStruct;
+use serde::{Serialize, Serializer};
 
 #[derive(Debug)]
 pub enum ReaderError {
@@ -13,11 +13,12 @@ pub enum ReaderError {
     OperationCancelled(String),
 }
 
-
 impl fmt::Display for ReaderError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            ReaderError::UnsupportedReader(ref reader) => write!(f, "Unsupported reader: {}", reader),
+            ReaderError::UnsupportedReader(ref reader) => {
+                write!(f, "Unsupported reader: {}", reader)
+            }
             ReaderError::PcscError(ref err) => write!(f, "PCSC error: {}", err),
             ReaderError::NoReadersFound => write!(f, "No readers found"),
             ReaderError::CardError(ref card, ref err) => {

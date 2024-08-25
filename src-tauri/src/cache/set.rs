@@ -10,6 +10,15 @@ use crate::database::schemas::user_schema::UserExternal;
 
 // Import StreamExt for async iteration
 
+/// Caches user data by serializing it to JSON and writing it to a file.
+///
+/// # Arguments
+///
+/// * `users` - A vector of `UserExternal` objects to be cached.
+///
+/// # Returns
+///
+/// * `Result<(), Box<dyn std::error::Error>>` - Returns `Ok(())` if the caching is successful, otherwise returns an error.
 fn cache_users(users: Vec<UserExternal>) -> Result<(), Box<dyn std::error::Error>> {
     let mut users_map = HashMap::new();
     for user in users {
@@ -29,11 +38,23 @@ fn cache_users(users: Vec<UserExternal>) -> Result<(), Box<dyn std::error::Error
     Ok(())
 }
 
+/// Retrieves user data from the database and caches it.
+///
+/// # Arguments
+///
+/// * `db` - A shared database connection.
+///
+/// # Returns
+///
+/// * `()` - This function does not return a value.
 pub(crate) async fn get_users_and_cache(db: SharedDatabase) {
     let db = db.read().await;
     let collection: Collection<UserExternal> = db.collection("users_external");
 
-    let cursor = collection.find(doc! {}).await.expect("Failed to execute find");
+    let cursor = collection
+        .find(doc! {})
+        .await
+        .expect("Failed to execute find");
 
     let users: Vec<UserExternal> = cursor
         .map(|doc| {
@@ -51,11 +72,11 @@ mod tests {
     use std::collections::HashMap;
 
     use futures::StreamExt;
-    use mongodb::{bson, Collection};
     use mongodb::bson::doc;
-    use rand::{Rng, thread_rng};
+    use mongodb::{bson, Collection};
     use rand::distributions::Alphanumeric;
     use rand::prelude::ThreadRng;
+    use rand::{thread_rng, Rng};
     use serde_json::json;
     use tauri::utils::config::parse::parse_json;
     use uuid::Uuid;
@@ -64,6 +85,15 @@ mod tests {
     use crate::database::connect::create_db_connection;
     use crate::database::schemas::user_schema::{HourData, UserExternal};
 
+    /// Generates random hour data for testing purposes.
+    ///
+    /// # Arguments
+    ///
+    /// * `rng` - A mutable reference to a random number generator.
+    ///
+    /// # Returns
+    ///
+    /// * `HourData` - A struct containing randomly generated hour data.
     fn generate_random_hour_data(rng: &mut impl Rng) -> HourData {
         let mut rng_clone = rng; // Clone the RNG for local use
 
@@ -83,12 +113,18 @@ mod tests {
 
         HourData {
             clock_in: random_time(&mut rng_clone),
-            lunch_break: random_time(&mut rng_clone),
+            lunch_break_out: random_time(&mut rng_clone),
+            lunch_break_return: random_time(&mut rng_clone),
             clocked_out: random_time(&mut rng_clone),
             total_hours: random_total_hours(&mut rng_clone),
         }
     }
 
+    /// Generates a random map of date strings to `HourData` for testing purposes.
+    ///
+    /// # Returns
+    ///
+    /// * `HashMap<String, HourData>` - A map containing randomly generated hour data keyed by date strings.
     fn generate_random_data_map() -> HashMap<String, HourData> {
         let mut map = HashMap::new();
         let mut rng = rand::thread_rng();
@@ -99,8 +135,8 @@ mod tests {
         for _ in 0..num_entries {
             // Generate a random day of the current month
             let random_day = rng.gen_range(1..=31); // Generates a random day between 1 and 31
-            let key = format!("{}/07/2024", random_day);
-
+                                                    // If random_day is not a two-digit number, pad it with a 0
+            let key = format!("{:02}/07/2024", random_day);
             // Generate a random HourData instance
             let hour_data = generate_random_hour_data(&mut rng);
 
@@ -110,10 +146,12 @@ mod tests {
         map
     }
 
-
+    /// Inserts mock users into the database for testing purposes.
     #[tokio::test]
     async fn insert_users() {
-        let db = create_db_connection("mongodb://localhost:27017").await.unwrap();
+        let db = create_db_connection("mongodb://localhost:27017")
+            .await
+            .unwrap();
         let db = db.read().await;
         let mock_users = json!(
             [{"name":"Hilary Oxtoby","email":"hoxtoby0@godaddy.com","role":"Biostatistician II","id":"b5111161-2801-4cd9-aa71-bd1723ae2df5"},
@@ -144,6 +182,7 @@ mod tests {
                 user.id = Uuid::new_v4().to_string();
                 user.hour_data = Some(hour_data);
                 user.image = None;
+                user.lunch_time = None;
                 user
             })
             .collect();
@@ -153,13 +192,19 @@ mod tests {
         collection.insert_many(users).await.unwrap();
     }
 
+    /// Tests the `cache_users` function by retrieving users from the database and caching them.
     #[tokio::test]
     async fn test_cache_users() {
-        let db = create_db_connection("mongodb://localhost:27017").await.unwrap();
+        let db = create_db_connection("mongodb://localhost:27017")
+            .await
+            .unwrap();
         let db = db.read().await;
         let collection: Collection<UserExternal> = db.collection("users_external");
 
-        let cursor = collection.find(doc! {}).await.expect("Failed to execute find");
+        let cursor = collection
+            .find(doc! {})
+            .await
+            .expect("Failed to execute find");
 
         let users: Vec<UserExternal> = cursor
             .map(|doc| {

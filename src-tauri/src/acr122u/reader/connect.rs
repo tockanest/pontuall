@@ -10,9 +10,12 @@ pub(crate) fn reader<'buf>() -> Result<(Context, String), ReaderError> {
     };
 
     let mut readers_buf = [0; 2048];
-    let mut readers = ctx.list_readers(&mut readers_buf).map_err(ReaderError::PcscError)?;
+    let mut readers = ctx
+        .list_readers(&mut readers_buf)
+        .map_err(ReaderError::PcscError)?;
 
-    let reader = readers.next()
+    let reader = readers
+        .next()
         .ok_or(ReaderError::NoReadersFound)?
         .to_str()
         .map_err(|_| ReaderError::UnsupportedReader("Invalid reader name".to_string()))?

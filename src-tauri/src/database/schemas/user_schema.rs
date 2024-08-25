@@ -20,8 +20,10 @@ bitflags! {
         const DeleteOthers = 1 << 5;
         const EditHours = 1 << 6;
         const EditHierarchy = 1 << 7;
-        const SuperVisor = Self::ReadSelf.bits() | Self::ReadOthers.bits() | Self::WriteSelf.bits() | Self::WriteOthers.bits() | Self::EditHours.bits();
-        const Admin = Self::SuperVisor.bits() | Self::DeleteSelf.bits() | Self::DeleteOthers.bits() | Self::EditHierarchy.bits();
+        const CreateReports = 1 << 8;
+        const SuperUser = 1 << 50;
+        const Supervisor = Self::ReadSelf.bits() | Self::ReadOthers.bits() | Self::WriteSelf.bits() | Self::WriteOthers.bits() | Self::EditHours.bits() | Self::CreateReports.bits() | Self::SuperUser.bits();
+        const Administrator = Self::Supervisor.bits() | Self::DeleteSelf.bits() | Self::DeleteOthers.bits() | Self::EditHierarchy.bits();
     }
 }
 
@@ -30,8 +32,7 @@ bitflags! {
 /** Mostly used for login and actions that require reading or writing to the database */
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub(crate) struct WorkerData {
-    pub(crate) first_name: String,
-    pub(crate) last_name: String,
+    pub(crate) name: String,
     pub(crate) role: String,
     pub(crate) email: Option<String>,
     pub(crate) phone: Option<String>,
@@ -43,15 +44,17 @@ pub(crate) struct InternalUserSchema {
     pub id: String,
     pub username: String,
     pub password: String,
+    pub registered_at: String,
     pub worker_data: WorkerData,
 }
 
 /** External User Schema */
 /** This Schema is used to store the user data that's not sensitive, such as email, name and work-related data */
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub(crate) struct HourData {
     pub(crate) clock_in: String,
-    pub(crate) lunch_break: String,
+    pub(crate) lunch_break_out: String,
+    pub(crate) lunch_break_return: String,
     pub(crate) clocked_out: String,
     pub(crate) total_hours: String,
 }
@@ -64,5 +67,6 @@ pub(crate) struct UserExternal {
     pub(crate) image: Option<String>,
     pub(crate) role: String,
     pub(crate) hour_data: Option<HashMap<String, HourData>>,
+    pub(crate) lunch_time: Option<String>,
     pub(crate) status: Option<String>,
 }

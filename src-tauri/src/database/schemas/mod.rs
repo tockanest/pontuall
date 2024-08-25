@@ -1,2 +1,2 @@
+pub(crate) mod permission_verify;
 pub(crate) mod user_schema;
-mod permission_verify;

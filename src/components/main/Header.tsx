@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {Button} from "@/components/ui/button";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
-import React, {SetStateAction, useState} from "react";
+import React, {SetStateAction, useEffect, useState} from "react";
 import {
     Dialog,
     DialogContent,
@@ -23,21 +23,77 @@ import {
 
 import Label from "@/components/ui/label"
 import Input from "@/components/ui/input"
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
+import TauriApi from "@/lib/Tauri";
+import {cookies} from "next/headers";
 
 export default function Header(
     {
         userLogged,
-        setPage
+        setUserLogged,
+        setPage,
+        version
     }: {
         userLogged: UserLogged | {},
+        setUserLogged: React.Dispatch<SetStateAction<UserLogged | {}>>,
         setPage: React.Dispatch<SetStateAction<Pages>>
+        version: {
+            version: string,
+            versionName: string
+        }
     }
 ) {
+
+    const [loginError, setLoginError] = useState<string>("");
     
     const [loginInfo, setLoginInfo] = useState<{
         email: string,
         password: string
     }>({email: "", password: ""})
+    
+    async function HandleLogin() {
+        // Check if any of the fields are empty
+        if (!loginInfo.email || !loginInfo.password) {
+            return;
+        }
+        
+
+            // Call the login function
+            const {userLogged, token, message, code} = await TauriApi.LoginUser(loginInfo.email, loginInfo.password);
+
+            // If the user is logged, set the state
+            if (Object.keys(userLogged).length > 0) {
+                setUserLogged(userLogged);
+                localStorage.setItem("token", token);
+            } else {
+                setLoginError(message);
+            }
+
+    }
+    
+    const [hasPermission, setHasPermission] = useState<boolean>(false);
+    useEffect(() => {
+        if (!userLogged || Object.keys(userLogged).length === 0) return;
+        
+        const backendChecks = async () => {
+            //@ts-ignore
+            const checkAdmin = await TauriApi.VerifyPermissions((userLogged as UserLogged).id, "WriteOthers");
+            //@ts-ignore
+            if (!checkAdmin) {
+                //@ts-ignore
+                const checkSupervisor = await TauriApi.VerifyPermissions((userLogged as UserLogged).id, "Supervisor");
+                return checkSupervisor;
+            }
+            
+            return checkAdmin;
+        }
+        
+        backendChecks().then((checks) => {
+            setHasPermission(checks);
+        });
+        
+    }, [userLogged])
+    
     
     return (
         <header className="flex items-center justify-between h-16 px-6 border-b border-muted">
@@ -83,7 +139,7 @@ export default function Header(
                                     Meu Perfil
                                 </DropdownMenuItem>
                                 {
-                                    (userLogged as UserLogged).permissions.includes("admin") && (
+                                    hasPermission && (
                                         <>
                                             <DropdownMenuItem
                                                 onClick={() => setPage("admin")}
@@ -103,7 +159,7 @@ export default function Header(
                                 >
                                     Sair
                                 </DropdownMenuItem>
-                                
+                            
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
@@ -114,8 +170,15 @@ export default function Header(
                             <DialogContent className="sm:max-w-[425px]">
                                 <DialogHeader>
                                     <DialogTitle>Login</DialogTitle>
-                                    <DialogDescription>
+                                    <DialogDescription className={"flex flex-col"}>
                                         Insira suas credenciais para acessar o sistema.
+                                        {
+                                            loginError && (
+                                                <span className="text-red-500">
+                                                    {loginError}
+                                                </span>
+                                            )
+                                        }
                                     </DialogDescription>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
@@ -137,7 +200,9 @@ export default function Header(
                                     </div>
                                 </div>
                                 <DialogFooter>
-                                    <Button type="submit">Login</Button>
+                                    <Button variant="outline" onClick={() => {
+                                        HandleLogin()
+                                    }}>Login</Button>
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>
@@ -176,7 +241,20 @@ export default function Header(
                         <DropdownMenuItem
                             className={"select-none"}
                         >
-                            <span className={"text-sm"}>Versão 2.0.0</span>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span className={"text-sm"}>
+                                            Versão: {version.version}
+                                        </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <span className={"text-xs"}>
+                                            {version.versionName}
+                                        </span>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

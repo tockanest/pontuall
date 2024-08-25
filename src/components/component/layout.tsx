@@ -2,6 +2,7 @@
 // Learn more: https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts#root-layout-required
 import {Manrope} from 'next/font/google'
 import {cn} from '@/lib/utils'
+import React from "react";
 
 const fontHeading = Manrope({
     subsets: ['latin'],
@@ -16,7 +17,7 @@ const fontBody = Manrope({
     weight: '400',
 })
 
-export default function Layout({children}) {
+export default function Layout({children}: {children: React.ReactNode}) {
     return (
         <div
             className={cn(

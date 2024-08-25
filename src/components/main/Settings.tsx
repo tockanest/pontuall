@@ -25,7 +25,6 @@ const timezones = {
 type SettingsProps = {
     timezone: string
     dateFormat: "12" | "24"
-    userLogged: UserLogged | {}
     hourFormat: "HH:MM" | "HH:MM:SS"
     theme: "deepsea" | "midnight" | "pastel"
     setTimezone: React.Dispatch<React.SetStateAction<string>>
@@ -36,7 +35,6 @@ type SettingsProps = {
 
 export default function Settings(
     {
-        userLogged,
         theme,
         setTheme,
         hourFormat,
@@ -50,6 +48,7 @@ export default function Settings(
     
     const {options, parseTimezone} = useTimezoneSelect({labelStyle, timezones})
     const [cardData, setCardData] = useState<{ block: number, data: string }[]>([]);
+    const [cardDataError, setCardDataError] = useState<string>("");
     const [reader, setReader] = useState<string>("");
     const [open, setOpen] = useState(false);
     
@@ -64,6 +63,12 @@ export default function Settings(
             }
         } catch (e: any) {
             console.log(e)
+            if (e.error === "Card Error") {
+                //     {error: 'Card Error', card: 'invalid utf-8 sequence of 1 bytes from index 0', message: 'An internal error has been detected, but the source is unknown'}
+                if (e.message.includes("source is unknown")) {
+                    setCardDataError(`Erro desconhecido ao ler o cartão: **${e.card}**\nEste tipo de erro normalmente ocorre com cartões formatados incorretamente.`)
+                }
+            }
         }
     }
     
@@ -124,6 +129,7 @@ export default function Settings(
                                     <SelectItem value="deepsea">Mar Profundo</SelectItem>
                                     <SelectItem value="pastel">Pastel</SelectItem>
                                     <SelectItem value="daylight">Claro</SelectItem>
+                                    <SelectItem value="sunset">Pôr do Sol</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -249,7 +255,7 @@ export default function Settings(
                                     </DialogHeader>
                                     <div className={"space-y-2"}>
                                         {
-                                            cardData.length === 0 && (
+                                            cardData.length === 0 && !cardDataError && (
                                                 <div className="flex items-center justify-center py-8">
                                                     <SpinnerIcon className={"w-16 h-16 animate-spin"}/>
                                                 </div>
@@ -269,14 +275,28 @@ export default function Settings(
                                                 </div>
                                             )
                                         )}
+                                        {
+                                            cardDataError && (
+                                                <div
+                                                    className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+                                                    role="alert">
+                                                   <span className="block sm:inline"
+                                                         dangerouslySetInnerHTML={{
+                                                             __html: cardDataError.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br>")
+                                                         }}
+                                                   />
+                                                </div>
+                                            )
+                                        }
                                     </div>
                                     <DialogFooter>
                                         <DialogClose asChild>
                                             <Button onClick={() => {
-                                                if (cardData.length === 0) {
+                                                if (cardData.length === 0 && cardDataError === "") {
                                                     HandleCloseRead()
                                                 } else {
                                                     setCardData([])
+                                                    setCardDataError("")
                                                 }
                                                 setOpen(false)
                                             }} variant={"destructive"}>

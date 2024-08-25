@@ -1,5 +1,5 @@
-use pcsc::{Error, Transaction};
 use crate::acr122u::utils::errors::ReaderError;
+use pcsc::{Error, Transaction};
 
 pub(crate) enum KeyType {
     A = 0x60,
@@ -31,7 +31,9 @@ pub(crate) fn authenticate_14443_3(
 
     let mut response_buf = [0; 512]; // Adjust the size as needed
 
-    let response = tx.transmit(&command, &mut response_buf).map_err(ReaderError::PcscError)?;
+    let response = tx
+        .transmit(&command, &mut response_buf)
+        .map_err(ReaderError::PcscError)?;
 
     if response.len() >= 2 {
         let sw1 = response[response.len() - 2];
@@ -41,10 +43,16 @@ pub(crate) fn authenticate_14443_3(
             Ok(())
         } else {
             //Return error
-            return Err(ReaderError::CardError("Authentication Failed.".to_string(), Error::CardNotAuthenticated));
+            return Err(ReaderError::CardError(
+                "Authentication Failed.".to_string(),
+                Error::CardNotAuthenticated,
+            ));
         }
     } else {
         //Return error
-        return Err(ReaderError::CardError("Invalid response.".to_string(), Error::CardNotAuthenticated));
+        return Err(ReaderError::CardError(
+            "Invalid response.".to_string(),
+            Error::CardNotAuthenticated,
+        ));
     }
 }

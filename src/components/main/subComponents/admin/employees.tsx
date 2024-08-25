@@ -5,15 +5,16 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import Input from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
-import React from "react";
+import React, {useEffect, useState} from "react";
+import TauriApi from "@/lib/Tauri";
 
 type EmployeesProps = {
     filteredEmployees: Users,
     setSelectedDate: React.Dispatch<React.SetStateAction<string>>,
     selectedDate: string,
-    selectedEmployee: IUsers,
+    selectedEmployee: IUsers | null,
+    setUsers: React.Dispatch<React.SetStateAction<Users | []>>
     GetData: (id: string) => void,
-    
 }
 
 export default function Employees(
@@ -22,13 +23,143 @@ export default function Employees(
         setSelectedDate,
         selectedDate,
         selectedEmployee,
+        setUsers,
         GetData
     }: EmployeesProps
 ) {
+
+    const [enableEdit, setEnableEdit] = useState(true);
+    const [hourData, setHourData] = useState<HourData>({
+        clock_in: "",
+        lunch_break_out: "",
+        lunch_break_return: "",
+        clocked_out: "",
+        total_hours: ""
+    });
+    const [updateMessage, setUpdateMessage] = useState<{
+        type: string,
+        message: string
+    }>({
+        type: "",
+        message: ""
+    });
+
+    useEffect(() => {
+        if (selectedEmployee && selectedDate !== "") {
+            setHourData(selectedEmployee.hour_data[selectedDate])
+        }
+    }, [selectedDate])
+
+    async function HandleEdit() {
+        // Check the keys that were modified
+        const modifiedKeys = Object.keys(hourData).filter((key) => {
+            // @ts-ignore
+            return selectedEmployee!.hour_data[selectedDate][key] !== hourData[key]
+        });
+
+        // Validate if keys are valid
+        if (modifiedKeys.length === 0) {
+            return
+        }
+
+        // Check if the values modified are empty and if they are, set as N/A
+        modifiedKeys.forEach((key) => {
+            // @ts-ignore
+            if (hourData[key] === "") {
+                // @ts-ignore
+                hourData[key] = "N/A"
+            }
+        });
+
+        enum Keys {
+            ClockIn = "ClockIn",
+            ClockLunchOut = "ClockLunchOut",
+            ClockLunchReturn = "ClockLunchReturn",
+            ClockOut = "ClockOut"
+        }
+
+        let updatedBools: boolean[] = [];
+        for (const key of modifiedKeys) {
+            let keyToUpdate: Keys;
+            switch (key) {
+                case "clock_in":
+                    keyToUpdate = Keys.ClockIn;
+                    break;
+                case "lunch_break_out":
+                    keyToUpdate = Keys.ClockLunchOut;
+                    break;
+                case "lunch_break_return":
+                    keyToUpdate = Keys.ClockLunchReturn;
+                    break;
+                case "clocked_out":
+                    keyToUpdate = Keys.ClockOut;
+                    break;
+                default:
+                    keyToUpdate = Keys.ClockIn;
+                    break;
+            }
+
+            try {
+                //@ts-ignore: This works, trust me. It's just a type error.
+                const update = await TauriApi.UpdateUser(selectedEmployee!.id, selectedDate, keyToUpdate, hourData[key])
+                updatedBools.push(update)
+            } catch (e) {
+                console.error(e)
+                updatedBools.push(false)
+            }
+        }
+
+        // Check if all updates were successful
+        if (updatedBools.every((bool) => bool)) {
+            // Update the cache
+            setUsers((prev) => {
+                return prev.map((user) => {
+                    if (user.id === selectedEmployee!.id) {
+                        return {
+                            ...user,
+                            hour_data: {
+                                ...user.hour_data,
+                                [selectedDate]: hourData
+                            }
+                        }
+                    }
+                    return user
+                })
+            })
+
+            const readableKeys = {
+                "clock_in": "Entrada",
+                "lunch_break_out": "Horário de Almoço - Saída",
+                "lunch_break_return": "Horário de Almoço - Retorno",
+                "clocked_out": "Saída"
+            }
+
+            const keys = modifiedKeys.map((key) => {
+                //@ts-ignore: This works, trust me. It's just a type error.
+                return readableKeys[key]
+            })
+
+            // Set a message with the keys that were updated
+            setUpdateMessage({
+                type: "success",
+                message: `Dados atualizados com sucesso: ${keys.join(", ")}`
+            })
+            setEnableEdit(true);
+        } else {
+            setUpdateMessage({
+                type: "error",
+                message: `Algum dos dados não puderam ser atualizados.`
+            })
+        }
+    }
+
     return (
         <>
             <Label htmlFor={"worker-list"}>
                 Funcionários
+                {
+                    filteredEmployees.length > 0 && ` (${filteredEmployees.length})`
+                }
             </Label>
             {
                 filteredEmployees.length === 0 ? (
@@ -38,7 +169,7 @@ export default function Employees(
                         <div key={employee.id}>
                             <Dialog>
                                 <DialogTrigger asChild>
-                                    <button key={employee.id} onClick={(e) => {
+                                    <button key={employee.id} onClick={() => {
                                         GetData(employee.id)
                                     }}
                                             className="bg-muted rounded-lg p-4 flex items-center justify-between w-[500px] max-w-[580px]">
@@ -56,7 +187,19 @@ export default function Employees(
                                     </button>
                                 </DialogTrigger>
                                 <DialogContent onInteractOutside={() => {
+                                    // Reset data
                                     setSelectedDate("")
+                                    setUpdateMessage({
+                                        type: "",
+                                        message: ""
+                                    })
+                                    setHourData({
+                                        clock_in: "",
+                                        lunch_break_out: "",
+                                        lunch_break_return: "",
+                                        clocked_out: "",
+                                        total_hours: ""
+                                    })
                                 }}>
                                     <DialogHeader>
                                         <div className="flex items-center gap-4">
@@ -72,7 +215,7 @@ export default function Employees(
                                         </div>
                                     </DialogHeader>
                                     {
-                                        !selectedEmployee || selectedEmployee === {} ? (
+                                        !selectedEmployee ? (
                                             <p className={"text-muted-foreground"}>
                                                 Nada encontrado. . .
                                             </p>
@@ -81,9 +224,7 @@ export default function Employees(
                                                 <Label htmlFor={"date-selector"}>
                                                     Selecione a data
                                                 </Label>
-                                                <Select
-                                                    onValueChange={(value) => setSelectedDate(value)}
-                                                >
+                                                <Select onValueChange={(value) => setSelectedDate(value)}>
                                                     <SelectTrigger>
                                                         <SelectValue
                                                             placeholder="Selecione uma Data"/>
@@ -108,48 +249,94 @@ export default function Employees(
                                                     </SelectContent>
                                                 </Select>
                                                 {
+                                                    updateMessage.type !== "" && (
+                                                        <div
+                                                            className={`p-2 rounded-lg bg-${updateMessage.type} text-white`}>
+                                                            {updateMessage.message}
+                                                        </div>
+                                                    )
+                                                }
+                                                {
                                                     selectedDate !== "" && (
                                                         <Card
                                                             className={"max-h-[256px] min-w-[256px] overflow-y-auto custom-scrollbar"}>
                                                             <CardHeader>
-                                                                <CardTitle
-                                                                    className={"font-normal text-xl"}>Pontos
-                                                                    Batidos</CardTitle>
-                                                                <CardDescription>no
-                                                                    Dia {selectedDate}</CardDescription>
+                                                                <CardTitle className={"font-normal text-xl"}>
+                                                                    Pontos Batidos
+                                                                </CardTitle>
+                                                                <CardDescription>
+                                                                    Dia {selectedDate}
+                                                                </CardDescription>
                                                             </CardHeader>
                                                             <CardContent className="space-y-2">
                                                                 <div key={selectedDate}
                                                                      className="grid gap-2">
                                                                     <div>
-                                                                        <Label
-                                                                            htmlFor="clock-in">Entrada</Label>
+                                                                        <Label htmlFor="clock-in">
+                                                                            Entrada
+                                                                        </Label>
                                                                         <Input id="clock-in"
-                                                                               readOnly
-                                                                               value={selectedEmployee.hour_data[selectedDate].clock_in}/>
+                                                                               readOnly={enableEdit}
+                                                                               onChange={(e) => {
+                                                                                   setHourData({
+                                                                                       ...hourData,
+                                                                                       clock_in: e.target.value
+                                                                                   })
+                                                                               }}
+                                                                               value={
+                                                                                   hourData.clock_in
+                                                                               }/>
                                                                     </div>
                                                                     <div>
                                                                         <Label
-                                                                            htmlFor="lunch-break">Horário
-                                                                            de Almoço</Label>
+                                                                            htmlFor="lunch-break">
+                                                                            Horário de Almoço - Saída
+                                                                        </Label>
                                                                         <Input id="lunch-break"
-                                                                               readOnly
-                                                                               value={selectedEmployee.hour_data[selectedDate].lunch_break}/>
+                                                                               readOnly={enableEdit}
+                                                                               onChange={(e) => {
+                                                                                   setHourData({
+                                                                                       ...hourData,
+                                                                                       lunch_break_out: e.target.value
+                                                                                   })
+                                                                               }}
+                                                                               value={hourData.lunch_break_out}/>
                                                                     </div>
                                                                     <div>
-                                                                        <Label
-                                                                            htmlFor="clock-out">Saída</Label>
+                                                                        <Label htmlFor="lunch-break">
+                                                                            Horário de Almoço - Retorno
+                                                                        </Label>
+                                                                        <Input id="lunch-break"
+                                                                               readOnly={enableEdit}
+                                                                               onChange={(e) => {
+                                                                                   setHourData({
+                                                                                       ...hourData,
+                                                                                       lunch_break_return: e.target.value
+                                                                                   })
+                                                                               }}
+                                                                               value={hourData.lunch_break_return}/>
+                                                                    </div>
+                                                                    <div>
+                                                                        <Label htmlFor="clock-out">
+                                                                            Saída
+                                                                        </Label>
                                                                         <Input id="clock-out"
-                                                                               readOnly
-                                                                               value={selectedEmployee.hour_data[selectedDate].clocked_out}/>
+                                                                               readOnly={enableEdit}
+                                                                               onChange={(e) => {
+                                                                                   setHourData({
+                                                                                       ...hourData,
+                                                                                       clocked_out: e.target.value
+                                                                                   })
+                                                                               }}
+                                                                               value={hourData.clocked_out}/>
                                                                     </div>
                                                                     <div>
-                                                                        <Label
-                                                                            htmlFor="total-hours">Total
-                                                                            de Horas</Label>
+                                                                        <Label htmlFor="total-hours">
+                                                                            Total de Horas
+                                                                        </Label>
                                                                         <Input id="total-hours"
                                                                                readOnly
-                                                                               value={selectedEmployee.hour_data[selectedDate].total_hours}/>
+                                                                               value={hourData.total_hours}/>
                                                                     </div>
                                                                 </div>
                                                             </CardContent>
@@ -157,16 +344,40 @@ export default function Employees(
                                                     )
                                                 }
                                             </div>
-                                        
                                         )
                                     }
                                     <DialogFooter>
                                         <div className={"flex gap-4"}>
-                                            <Button variant="destructive">
+                                            <Button
+                                                variant="destructive"
+                                                disabled={selectedDate === ""}
+                                            >
                                                 Excluir
                                             </Button>
-                                            <Button variant="default">
+                                            <Button
+                                                variant="default"
+                                                disabled={selectedDate === ""}
+                                                onClick={() => {
+                                                    setEnableEdit(!enableEdit)
+                                                }}
+                                            >
                                                 Editar
+                                            </Button>
+                                            {
+                                                !enableEdit && (
+                                                    <Button
+                                                        variant="primary"
+                                                        onClick={() => {
+                                                            // Check what was modified and what wasn't
+                                                            HandleEdit()
+                                                        }}
+                                                    >
+                                                        Salvar
+                                                    </Button>
+                                                )
+                                            }
+                                            <Button variant="default">
+                                                Editar Usuário
                                             </Button>
                                         </div>
                                     </DialogFooter>

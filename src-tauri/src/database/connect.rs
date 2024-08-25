@@ -1,5 +1,5 @@
-use std::error::Error;
 use mongodb::{Client, Database};
+use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
