@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use futures::StreamExt;
 use mongodb::bson::doc;
 use mongodb::Collection;
-use serde::{Deserialize, Serialize};
+
 
 use crate::database::connect::SharedDatabase;
 use crate::database::schemas::user_schema::UserExternal;

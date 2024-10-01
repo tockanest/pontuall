@@ -2,7 +2,7 @@
 name = "pontuall"
 version = "0.1.0"
 description = "PontuAll"
-authors = ["you"]
+authors = ["TockaNest @ https://github.com/tockanest"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -12,7 +12,6 @@ tauri-build = { version = "2.0.0-beta", features = [] }
 
 [dependencies]
 tauri = { version = "2.0.0-beta", features = [] }
-tauri-plugin-stronghold = "2.0.0-beta"
 tauri-plugin-fs = "2.0.0-beta"
 tauri-plugin-store = "2.0.0-beta"
 serde = { version = "1", features = ["derive"] }
@@ -26,13 +25,13 @@ argon2 = "0.5.3"
 rand = "0.8.5"
 uuid = { version = "1.10.0", features = ["v4"] }
 dirs = "5.0.1"
-rust_xlsxwriter = { version = "0.72.0", features = ["chrono"] }
+rust_xlsxwriter = { version = "0.74.0", features = ["chrono"] }
 chrono = "0.4.38"
 hmac = "0.12.1"
 sha2 = "0.10.8"
-rand_core = "0.6.4"
-base64 = "0.13.1"
+base64 = "0.22.1"
 hex = "0.4.3"
+keyring = { version = "3.3.0", features = ["apple-native", "windows-native", "sync-secret-service"] }
 
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
 tauri-plugin-single-instance = "2.0.0-rc.0"

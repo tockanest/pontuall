@@ -65,7 +65,7 @@ fn connect() -> Result<FullReaderResult, ReaderError> {
 /// * `false` if the context is invalid.
 fn validate_context(context: &Context) -> bool {
     return match context.is_valid() {
-        Ok(valid) => true,
+        Ok(_valid) => true,
         Err(_) => false,
     };
 }

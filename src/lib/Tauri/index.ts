@@ -115,7 +115,7 @@ export default class TauriApi {
     
     public static async CheckPermissions(
         userLogged: UserLogged,
-        actions: Permissions[]
+        actions: AppPermissions[]
     ) {
         if (!userLogged || Object.keys(userLogged).length === 0) return false;
         
@@ -195,8 +195,12 @@ export default class TauriApi {
     }
     
     // This command is called ONCE at the splashscreen window to set up the app.
-    public static async SetupApp(): Promise<void> {
-        return this.command<void>("complete_setup", {task: "finish_frontend"});
+    public static async SetupApp(): Promise<boolean> {
+        return this.command<boolean>("complete_setup", {task: "finish_frontend"});
+    }
+    
+    public static async SetupDatabase(uri: string) {
+        return this.command<boolean>("insert_uri", {uri});
     }
     
     // Event listener for each window

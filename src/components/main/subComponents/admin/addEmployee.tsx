@@ -281,9 +281,9 @@ export default function AddEmployee(
                     <Input
                         id={"name"} type={"text"} placeholder={"Nome do Funcionário"}
                         value={newUser.name}
-                        max={16}
+                        max={24}
                         onChange={(e) => {
-                            if (e.target.value.length > 16) return;
+                            if (e.target.value.length > 24) return;
                             setNewUser({...newUser, name: e.target.value})
                         }}
                     />

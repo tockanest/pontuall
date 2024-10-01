@@ -2,7 +2,8 @@ use argon2::PasswordVerifier;
 use hmac::{Hmac, Mac};
 use mongodb::bson::doc;
 use mongodb::Collection;
-use serde::{Deserialize, Serialize};
+
+use base64::{alphabet, engine::{self, general_purpose}, Engine as _};
 use serde_json::{json, Value};
 use sha2::Sha256;
 use std::ops::Deref;
@@ -11,7 +12,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::database::connect::SharedDatabase;
 use crate::database::schemas::permission_verify::{PermissionAction, PermissionChecker};
-use crate::database::schemas::user_schema::{InternalUserSchema, Permissions, PermissionsBitField};
+use crate::database::schemas::user_schema::InternalUserSchema;
 use crate::misc::get::version_name;
 
 /**
@@ -102,9 +103,9 @@ fn generate_token(
     let timestamp = chrono::Utc::now().timestamp();
 
     // Convert id to numeric string
-    let id = base64::encode(user_id.clone().as_bytes());
+    let id = general_purpose::STANDARD.encode(user_id.as_bytes());
 
-    // This is not the best way of doing this, we should not hard-code the secret
+    // This is not the best way of doing this, we should not hard-code the secret,
     // but since this is local, it's fine for now.
     // Will add support later to use the same password the user uses for stronghold
     let mut mac = HmacSha256::new_from_slice(b"PontuAll-c8542b78884cc588788c293ed46abd3a").unwrap();

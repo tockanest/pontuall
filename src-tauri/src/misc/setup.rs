@@ -1,10 +1,8 @@
+use keyring::Entry;
 use std::sync::Mutex;
-use std::time::Duration;
-
-use tauri::{AppHandle, Emitter, Manager, State, Wry};
-use tauri_plugin_store::{with_store, StoreCollection};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tokio::task;
-use tokio::time::sleep;
+
 
 use crate::cache::set::get_users_and_cache;
 use crate::database::connect::create_db_connection;
@@ -15,22 +13,12 @@ pub(crate) struct SetupState {
 }
 
 async fn setup(app: AppHandle) -> Result<(), ()> {
-    let app_clone = app.clone();
-    let stores = app_clone.state::<StoreCollection<Wry>>();
+    let mongo_db_uri = Entry::new("PontuAll", "mongodb_uri").unwrap();
+    let uri = mongo_db_uri.get_password().unwrap_or_else(|_| "PontuAll: Could not find MongoDb at the KeyRing.".to_string());
 
-    // Path is: %APPDATA%/Roaming/PontuAll/config.cfg
-    let path = dirs::config_dir().unwrap().join("PontuAll/config.cfg");
-    let mongo_db_uri = with_store(app.clone(), stores, path, |store| {
-        let uri = store.get("mongo_uri").unwrap().clone();
-        Ok(uri)
-    })
-    .unwrap_or_else(|_| {
-        panic!("Failed to get MongoDB URI from config file");
-    });
-
-    let db_connection = create_db_connection(mongo_db_uri.as_str().unwrap())
-        .await
-        .unwrap();
+    let db_connection = create_db_connection(
+        uri.as_str()
+    ).await.unwrap();
     app.manage(db_connection.clone());
 
     let splash_window = app.get_webview_window("splashscreen").unwrap();
@@ -55,8 +43,8 @@ async fn setup(app: AppHandle) -> Result<(), ()> {
             "finish_backend".to_string(),
         ))
     })
-    .await
-    .unwrap()?;
+        .await
+        .unwrap()?;
 
     Ok(())
 }
@@ -83,10 +71,32 @@ pub(crate) async fn complete_setup(
     }
 
     if state_lock.backend_task && state_lock.frontend_task {
-        let splash_window = app.get_webview_window("splashscreen").unwrap();
-        let main_window = app.get_webview_window("main").unwrap();
+
+
+        // Check if webview main already exists
+        if app.get_webview_window("main").is_none() {
+            println!("Creating main window");
+            // This creates the main window dynamically to prevent authentication issues.
+            // If the main window gets created and there's no token, the app might just not work.
+            WebviewWindowBuilder::new(&app, "main".to_string(), WebviewUrl::default())
+                .title("PontuAll")
+                .center()
+                .maximized(true)
+                .visible(true)
+                .build()
+                .unwrap_or_else(|e| panic!("Error: {}", e));
+        } else {
+            // If the main window already exists, just show it
+            let main_window = app.get_webview_window("main").unwrap();
+            main_window.maximize().unwrap();
+            main_window.center().unwrap();
+            main_window.show().unwrap();
+        }
+
+        let splash_window = app.get_webview_window("splashscreen").unwrap_or_else(|| {
+            panic!("Could not find the splashscreen window");
+        });
         splash_window.close().unwrap();
-        main_window.show().unwrap();
     }
 
     Ok(())

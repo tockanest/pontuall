@@ -1,9 +1,9 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
+#![warn(unused_extern_crates)]
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 
 use crate::acr122u::tauri_commands::{
     cancel_read, cancel_write, connect_reader, get_connection, read_card, write_card, ReadState,
@@ -15,8 +15,10 @@ use crate::cache::update::update_cache_hour_data;
 use crate::database::tauri_commands::{check_permission, user_login};
 use crate::excel::create::create_excel_relatory;
 use crate::misc::get::version_name;
+use crate::misc::set_db_uri::insert_uri;
 use crate::misc::setup::{complete_setup, SetupState};
 use crate::misc::token;
+use crate::misc::token::verify;
 
 mod acr122u;
 mod cache;
@@ -38,7 +40,7 @@ fn main() {
     });
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             let windows = app.webview_windows();
 
             windows
@@ -71,12 +73,13 @@ fn main() {
             update_cache_hour_data,
             // Setup / System related
             complete_setup,
+            insert_uri,
             version_name,
             // Relatories
             create_excel_relatory,
             // Login
             user_login,
-            token::verify,
+            verify,
             // Permissions
             check_permission
         ])

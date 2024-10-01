@@ -76,7 +76,7 @@ pub(crate) async fn write_block(
             let start = i * block_size as usize;
             let end = (i + 1) * block_size as usize;
 
-            let size = if end < data.len() {
+            let _size = if end < data.len() {
                 block_size
             } else {
                 (data.len() - i * block_size as usize) as u8 as u16

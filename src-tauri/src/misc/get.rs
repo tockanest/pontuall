@@ -1,7 +1,7 @@
 #[tauri::command]
 pub(crate) fn version_name(version: String) -> String {
-    return match version {
+    match version {
         version if version == "0.1.0" => "Yttrium".to_string(),
         _ => "noname".to_string(),
-    };
+    }
 }

@@ -4,3 +4,5 @@ pub(crate) mod get;
 pub(crate) mod setup;
 #[macro_use]
 pub(crate) mod token;
+#[macro_use]
+pub(crate) mod set_db_uri;

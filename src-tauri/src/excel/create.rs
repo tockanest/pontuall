@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::error::Error;
+
 
 use chrono::{Datelike, Duration, NaiveDate, NaiveTime, Weekday};
 use rust_xlsxwriter::*;
@@ -34,12 +34,13 @@ pub(crate) fn create_excel_relatory(
     let worksheet = workbook.add_worksheet();
 
     // Write the header row
-    worksheet.write_string(0, 0, "Name").unwrap();
-    worksheet.write_string(0, 1, "Dia").unwrap();
-    worksheet.write_string(0, 2, "Entrada").unwrap();
-    worksheet.write_string(0, 3, "Almoço - Saída").unwrap();
-    worksheet.write_string(0, 4, "Almoço - Retorno").unwrap();
-    worksheet.write_string(0, 5, "Saída").unwrap();
+    let bold = Format::new().set_bold().set_font_size(14.0);
+    worksheet.write_string_with_format(0, 0, "Nome", &bold).unwrap();
+    worksheet.write_string_with_format(0, 1, "Dia", &bold).unwrap();
+    worksheet.write_string_with_format(0, 2, "Entrada", &bold).unwrap();
+    worksheet.write_string_with_format(0, 3, "Almoço - Saída", &bold).unwrap();
+    worksheet.write_string_with_format(0, 4, "Almoço - Retorno", &bold).unwrap();
+    worksheet.write_string_with_format(0, 5, "Saída", &bold).unwrap();
 
     // Define formats for early and late entries
     let early_color = Format::new()
@@ -66,15 +67,29 @@ pub(crate) fn create_excel_relatory(
         .write_string_with_format(3, 8, "Dia não registrado", &unregistered_color)
         .unwrap();
     worksheet
-        .write_string(4, 8, "Domingos não são registrados")
+        .write_string(4, 8, "Domingos não são registrados!")
+        .unwrap();
+
+
+    worksheet
+        .write_string(6, 8, "Horários Configurados:")
+        .unwrap();
+    worksheet
+        .write_string(7, 8, format!("Entrada: {}", entry_time).as_str())
+        .unwrap();
+    worksheet
+        .write_string(8, 8, format!("Saída: {}", exit_time).as_str())
+        .unwrap();
+    worksheet
+        .write_string(9, 8, format!("Tolerância: {} minutos", tolerance).as_str())
         .unwrap();
 
     // Set column widths
     worksheet.set_column_width(0, 30).unwrap();
     worksheet.set_column_width(1, 12).unwrap();
     worksheet.set_column_width(2, 10).unwrap();
-    worksheet.set_column_width(3, 15).unwrap();
-    worksheet.set_column_width(4, 15).unwrap();
+    worksheet.set_column_width(3, 18).unwrap();
+    worksheet.set_column_width(4, 18).unwrap();
     worksheet.set_column_width(5, 10).unwrap();
     worksheet.set_column_width(8, 30).unwrap();
 
@@ -88,8 +103,8 @@ pub(crate) fn create_excel_relatory(
             if date
                 >= NaiveDate::parse_from_str(&date_start, "%d/%m/%Y").expect("Invalid date format")
                 && date
-                    <= NaiveDate::parse_from_str(&date_end, "%d/%m/%Y")
-                        .expect("Invalid date format")
+                <= NaiveDate::parse_from_str(&date_end, "%d/%m/%Y")
+                .expect("Invalid date format")
             {
                 data_rows.push((name.clone(), date_str.clone(), hour_data.clone()));
             }
@@ -111,7 +126,7 @@ pub(crate) fn create_excel_relatory(
     // Convert tolerance to minutes
     let tolerance_minutes = tolerance.parse::<i32>().map_err(|_| ())?;
 
-    // Write the excel file, filtering by name and date.
+    // Write the Excel file, filtering by name and date.
     let start_date = NaiveDate::parse_from_str(&date_start, "%d/%m/%Y").unwrap();
     let end_date = NaiveDate::parse_from_str(&date_end, "%d/%m/%Y").unwrap();
     let dates = generate_dates_range(start_date, end_date);
@@ -134,8 +149,8 @@ pub(crate) fn create_excel_relatory(
                 .cloned();
 
             if let Some(hour_data) = hour_data {
-                let entry_time = NaiveTime::parse_from_str(&entry_time, "%H:%M").unwrap();
-                let exit_time = NaiveTime::parse_from_str(&exit_time, "%H:%M").unwrap();
+                let entry_time = NaiveTime::parse_from_str(&entry_time, "%H:%M:%S").unwrap();
+                let exit_time = NaiveTime::parse_from_str(&exit_time, "%H:%M:%S").unwrap();
 
                 let clock_in = if hour_data.clock_in == "N/A" {
                     None
@@ -330,7 +345,7 @@ mod tests {
             "10".to_string(),
             users,
         )
-        .unwrap();
+            .unwrap();
 
         assert_eq!(create, true);
     }

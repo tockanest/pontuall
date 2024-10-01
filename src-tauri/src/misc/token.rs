@@ -1,11 +1,13 @@
 use crate::database::connect::SharedDatabase;
 use crate::database::schemas::user_schema::InternalUserSchema;
 use crate::misc::get::version_name;
+use base64::{engine::general_purpose, Engine as _};
 use hmac::{Hmac, Mac};
 use mongodb::bson::doc;
 use mongodb::Collection;
 use sha2::Sha256;
 use std::ops::Deref;
+
 use tauri::{AppHandle, Manager};
 
 type HmacSha256 = Hmac<Sha256>;
@@ -19,7 +21,7 @@ pub(crate) async fn verify(token: String, app: AppHandle) -> Result<InternalUser
     }
 
     // Get the id, timestamp, and signature
-    let id = base64::decode(parts[0])
+    let id = general_purpose::STANDARD.decode(parts[0])
         .unwrap()
         .into_iter()
         .map(char::from)

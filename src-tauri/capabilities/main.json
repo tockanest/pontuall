@@ -13,11 +13,6 @@
         "core:image:default",
         "core:resources:default",
         "core:menu:default",
-        "core:tray:default",
-        "stronghold:allow-load-client",
-        "stronghold:allow-save",
-        "stronghold:allow-save-store-record",
-        "stronghold:allow-get-store-record",
-        "stronghold:allow-remove-store-record"
+        "core:tray:default"
     ]
 }
