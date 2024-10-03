@@ -34,6 +34,22 @@ declare global {
 		permissions: string
 	}
 	
+	type FirstUser = {
+		id: string,
+		username: string,
+		password: string,
+		registered_at: string,
+		worker_data: {
+			name: string,
+			role: string,
+			email: string,
+			phone: string,
+			permissions: {
+				flags: string
+			}
+		}
+	}
+	
 	type InternalUser = {
 		_id: {
 			$oid: string
@@ -50,9 +66,6 @@ declare global {
 			permissions: {
 				flags: string
 			},
-			permissions_as_bits: {
-				$numberLong: string
-			}
 		}
 	}
 	

@@ -73,12 +73,9 @@ mod tests {
 
     use futures::StreamExt;
     use mongodb::bson::doc;
-    use mongodb::{bson, Collection};
-    use rand::distributions::Alphanumeric;
-    use rand::prelude::ThreadRng;
-    use rand::{thread_rng, Rng};
+    use mongodb::Collection;
+    use rand::Rng;
     use serde_json::json;
-    use tauri::utils::config::parse::parse_json;
     use uuid::Uuid;
 
     use crate::cache::set::cache_users;
@@ -135,7 +132,7 @@ mod tests {
         for _ in 0..num_entries {
             // Generate a random day of the current month
             let random_day = rng.gen_range(1..=31); // Generates a random day between 1 and 31
-                                                    // If random_day is not a two-digit number, pad it with a 0
+            // If random_day is not a two-digit number, pad it with a 0
             let key = format!("{:02}/07/2024", random_day);
             // Generate a random HourData instance
             let hour_data = generate_random_hour_data(&mut rng);
@@ -149,7 +146,7 @@ mod tests {
     /// Inserts mock users into the database for testing purposes.
     #[tokio::test]
     async fn insert_users() {
-        let db = create_db_connection("mongodb://localhost:27017")
+        let db = create_db_connection()
             .await
             .unwrap();
         let db = db.read().await;
@@ -195,7 +192,7 @@ mod tests {
     /// Tests the `cache_users` function by retrieving users from the database and caching them.
     #[tokio::test]
     async fn test_cache_users() {
-        let db = create_db_connection("mongodb://localhost:27017")
+        let db = create_db_connection()
             .await
             .unwrap();
         let db = db.read().await;

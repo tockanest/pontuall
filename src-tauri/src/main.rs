@@ -17,7 +17,6 @@ use crate::excel::create::create_excel_relatory;
 use crate::misc::get::version_name;
 use crate::misc::set_db_uri::insert_uri;
 use crate::misc::setup::{complete_setup, SetupState};
-use crate::misc::token;
 use crate::misc::token::verify;
 
 mod acr122u;

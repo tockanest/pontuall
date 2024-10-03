@@ -1,37 +1,37 @@
 {
-    "productName": "PontuAll",
-    "version": "0.1.0",
-    "identifier": "PontuAll",
-    "build": {
-        "beforeDevCommand": "npm run dev",
-        "beforeBuildCommand": "npm run build",
-        "devUrl": "http://localhost:3000",
-        "frontendDist": "../out"
-    },
-    "app": {
-        "withGlobalTauri": true,
-        "windows": [
-            {
-                "label": "splashscreen",
-                "title": "PontuAll - Inicializando",
-                "width": 600,
-                "height": 600,
-                "resizable": true,
-                "visible": true,
-                "url": "/splashscreen",
-                "center": true,
-                "closable": false
-            }
-        ],
-        "security": {
-            "csp": null
-        }
-    },
-    "bundle": {
-        "active": true,
-        "targets": "all",
-        "icon": [
-            "icons/clock.ico"
-        ]
-    }
+	"productName": "PontuAll",
+	"version": "0.1.1",
+	"identifier": "PontuAll",
+	"build": {
+		"beforeDevCommand": "npm run dev",
+		"beforeBuildCommand": "npm run build",
+		"devUrl": "http://localhost:3000",
+		"frontendDist": "../out"
+	},
+	"app": {
+		"withGlobalTauri": true,
+		"windows": [
+			{
+				"label": "splashscreen",
+				"title": "PontuAll - Inicializando",
+				"width": 600,
+				"height": 600,
+				"resizable": true,
+				"visible": true,
+				"url": "/splashscreen",
+				"center": true,
+				"closable": false
+			}
+		],
+		"security": {
+			"csp": null
+		}
+	},
+	"bundle": {
+		"active": true,
+		"targets": "all",
+		"icon": [
+			"icons/clock.ico"
+		]
+	}
 }

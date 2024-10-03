@@ -3,7 +3,7 @@ use hmac::{Hmac, Mac};
 use mongodb::bson::doc;
 use mongodb::Collection;
 
-use base64::{alphabet, engine::{self, general_purpose}, Engine as _};
+use base64::{engine::general_purpose, Engine as _};
 use serde_json::{json, Value};
 use sha2::Sha256;
 use std::ops::Deref;

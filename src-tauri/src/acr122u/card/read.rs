@@ -1,7 +1,6 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use futures::TryFutureExt;
 use pcsc::*;
 
 use crate::acr122u::card::utils::authenticate::{authenticate_14443_3, KeyType};
@@ -24,7 +23,10 @@ use crate::acr122u::utils::errors::ReaderError;
 ///         block 9 – data block
 ///         block 10 – data block
 ///         block 11 – sector trailer
-/// And so on. Be careful when accessing the blocks, as the sector trailer contains the access bits and the key A and key B. Overwriting the sector trailer can make the card unreadable.
+/// And so on.
+/// Be careful when accessing the blocks,
+/// as the sector trailer contains the access bits,
+/// and the key A and key B. Overwriting the sector trailer can make the card unreadable.
 ///
 /// Reads data from a specified block on a card.
 ///
@@ -49,7 +51,7 @@ use crate::acr122u::utils::errors::ReaderError;
 /// * The reader name is invalid.
 /// * The read operation fails.
 /// * The card type is unsupported.
-/// * The operation is cancelled.
+/// * The operation is canceled.
 ///
 /// # Examples
 ///
@@ -236,7 +238,7 @@ mod tests {
                     .map(|b| format!("{:02X}", b))
                     .collect::<Vec<String>>()
                     .join(" ");
-                // Convert the hex to readable text
+                // Convert the hex to a readable text
                 let data_text = data_str
                     .split_whitespace()
                     .map(|s| {

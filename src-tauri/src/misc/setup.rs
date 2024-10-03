@@ -1,4 +1,3 @@
-use keyring::Entry;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tokio::task;
@@ -13,12 +12,7 @@ pub(crate) struct SetupState {
 }
 
 async fn setup(app: AppHandle) -> Result<(), ()> {
-    let mongo_db_uri = Entry::new("PontuAll", "mongodb_uri").unwrap();
-    let uri = mongo_db_uri.get_password().unwrap_or_else(|_| "PontuAll: Could not find MongoDb at the KeyRing.".to_string());
-
-    let db_connection = create_db_connection(
-        uri.as_str()
-    ).await.unwrap();
+    let db_connection = create_db_connection().await.unwrap();
     app.manage(db_connection.clone());
 
     let splash_window = app.get_webview_window("splashscreen").unwrap();

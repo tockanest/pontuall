@@ -64,10 +64,10 @@ fn connect() -> Result<FullReaderResult, ReaderError> {
 /// * `true` if the context is valid.
 /// * `false` if the context is invalid.
 fn validate_context(context: &Context) -> bool {
-    return match context.is_valid() {
+    match context.is_valid() {
         Ok(_valid) => true,
         Err(_) => false,
-    };
+    }
 }
 
 /// Reads data from a specified block on the card.
@@ -103,7 +103,7 @@ async fn mcp_read(block_number: u16, state: Arc<ReadState>) -> Result<Vec<u8>, R
             None,
             None,
         )
-        .await?;
+            .await?;
         Ok(read)
     } else {
         Err(ReaderError::PcscError(pcsc::Error::InvalidHandle))
@@ -254,8 +254,8 @@ async fn mcp_write(
             Option::from(16),
             &state.cancel_flag,
         )
-        .await
-        .unwrap_or_else(|e| panic!("{:?}", e));
+            .await
+            .unwrap_or_else(|e| panic!("{:?}", e));
 
         if result {
             Ok(())
@@ -308,8 +308,8 @@ pub(crate) async fn write_card(
 /// * `Err(ReaderError)` - If an error occurs during the connection.
 #[tauri::command]
 pub(crate) fn get_connection() -> Result<String, ReaderError> {
-    return match connect() {
+    match connect() {
         Ok(result) => Ok(result.reader),
         Err(e) => Err(e),
-    };
+    }
 }

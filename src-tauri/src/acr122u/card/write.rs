@@ -30,7 +30,7 @@ use crate::acr122u::utils::errors::ReaderError;
 /// * The data length is not a multiple of the block size.
 /// * The write operation fails.
 /// * The card type is unsupported.
-/// * The operation is cancelled.
+/// * The operation is canceled.
 ///
 /// # Examples
 ///
@@ -50,8 +50,7 @@ pub(crate) async fn write_block(
     cancel_flag: &Arc<AtomicBool>,
 ) -> Result<bool, ReaderError> {
     let reader = CString::new(reader)
-        .map_err(|_| ReaderError::UnsupportedReader("Invalid reader name".to_string()))
-        .unwrap();
+        .map_err(|_| ReaderError::UnsupportedReader("Invalid reader name".to_string()))?;
     let block_size = block_size.unwrap_or(16);
 
     if data.len() < block_size as usize || data.len() % block_size as usize != 0 {
@@ -211,17 +210,18 @@ mod tests {
 
     use super::*;
 
+    #[tokio::test]
     async fn test_write_single() {
         let (ctx, reader) = reader().unwrap();
         let cancel_flag = Arc::new(AtomicBool::new(false));
 
         let mut buffer = vec![0; 16];
-        let data = "Hello, World!";
+        let data = "LvKY0TDcb34hbNeJ";
         let data_len = data.len();
         let copy_len = std::cmp::min(data_len, buffer.len());
         buffer[..copy_len].copy_from_slice(&data.as_bytes()[..copy_len]);
 
-        let result = write_block(ctx, reader, 4, buffer, Option::from(16), &cancel_flag)
+        let result = write_block(ctx, reader, 5, buffer, Option::from(16), &cancel_flag)
             .await
             .unwrap_or_else(|e| panic!("{:?}", e));
 

@@ -10,10 +10,11 @@ import HoursSetup from "@/components/splashscreen/HoursSetup";
 import MongoDbSetup from "@/components/splashscreen/MongoDbSetup";
 
 async function SetupDatabase(
-	uri?: string
+	appName: string,
+	uri?: string,
 ) {
 	try {
-		await TauriApi.SetupDatabase(uri || "mongodb://localhost:27017");
+		await TauriApi.SetupDatabase(appName, uri || "mongodb://localhost:27017",);
 		return true
 	} catch (e: any) {
 		console.log(e)
@@ -23,10 +24,11 @@ async function SetupDatabase(
 
 async function Setup(
 	setBackendSetup: (value: boolean) => void,
+	appName: string,
 	uri?: string,
 ) {
 	try {
-		const setupDb = await SetupDatabase(uri);
+		const setupDb = await SetupDatabase(appName, uri);
 		
 		if (setupDb) {
 			setBackendSetup(true);
@@ -45,10 +47,25 @@ export default function Splashscreen() {
 	const [setupStep, setSetupStep] = useState(0)
 	const [AppConfigured, setAppConfigured] = useState(false)
 	
-	// Step 2
-	const [mongoDbUri, setMongoDbUri] = useState<string>("")
+	const [firstUser, setFirstUser] = useState<FirstUser>({
+		id: "",
+		username: "",
+		password: "",
+		registered_at: "",
+		worker_data: {
+			name: "",
+			role: "",
+			email: "",
+			phone: "",
+			permissions: {
+				flags: ""
+			}
+		}
+	})
 	
-	// Step 3 is where you set data for the clock in and clock out times
+	const [mongoDbUri, setMongoDbUri] = useState<string>("")
+	const [appName, setAppName] = useState<string>("")
+	
 	const [horarioEntrada, setHorarioEntrada] = useState<string>("")
 	const [minutosTolerancia, setMinutosTolerancia] = useState<number>(0)
 	const [horarioSaida, setHorarioSaida] = useState<string>("")
@@ -177,6 +194,8 @@ export default function Splashscreen() {
 									{
 										setupStep === 2 && MongoDbSetup({
 											mongoDbUri,
+											appName,
+											setAppName,
 											setMongoDbUri,
 											setSetupStep,
 											setBackendSetup,

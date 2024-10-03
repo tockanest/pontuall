@@ -1,6 +1,6 @@
 [package]
 name = "pontuall"
-version = "0.1.0"
+version = "0.1.1"
 description = "PontuAll"
 authors = ["TockaNest @ https://github.com/tockanest"]
 edition = "2021"

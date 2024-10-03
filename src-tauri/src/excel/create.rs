@@ -330,7 +330,7 @@ mod tests {
     /// Tests the `create_excel_relatory` function.
     #[tokio::test]
     async fn test_create_excel_relatory() {
-        let db = create_db_connection("mongodb://localhost:27017")
+        let db = create_db_connection()
             .await
             .unwrap();
         get_users_and_cache(db).await;

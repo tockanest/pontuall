@@ -213,16 +213,16 @@ export default function HomePage(
 				if (currentTime.isBefore(MinLunchTimeDate.subtract(parseInt(MinutosTolerancia), 'minutes'))) {
 					// Show warning if it's too early to clock out for lunch
 					setDialogMessage({
-						message: `O ponto de saída/retorno do almoço deve ser batido após as ${MinLunchTimeDate.format("HH:mm:ss")}`,
+						message: `O ponto de saída/retorno do almoço deve ser batido após as ${MinLunchTimeDate.format("HH:mm:ss")} - T01`,
 						type: "warning",
 						release: "clock_out"
 					});
 					setMessageDialogOpen(true);
 					return;
-				} else if (currentTime.isAfter(MinLunchTimeDate)) {
+				} else if (currentTime.isAfter(moment(`${user.lunch_time}`, "HH:mm").add(parseInt(MinutosTolerancia), 'minutes'))) {
 					// Show warning if it's too late to clock out for lunch
 					setDialogMessage({
-						message: `O ponto de saída/retorno do almoço deve ser batido após às ${MinLunchTimeDate.format("HH:mm:ss")}`,
+						message: `O ponto de saída/retorno do almoço deve ser batido após às ${MinLunchTimeDate.format("HH:mm:ss")} - T02`,
 						type: "warning",
 						release: "clock_out"
 					});
@@ -240,7 +240,15 @@ export default function HomePage(
 				const currentTime = moment(Date.now());
 				
 				// Calculate the maximum allowed time for lunch return, considering the tolerance
-				const maxAllowedTimeForReturn = MaxLunchTimeDate.clone().add(parseInt(MinutosTolerancia) + 60, 'minutes');
+				const maxAllowedTimeForReturn = MaxLunchTimeDate.clone().add(parseInt(MinutosTolerancia), 'minutes');
+				const minAllowedTimeForReturn = MaxLunchTimeDate.clone().subtract(parseInt(MinutosTolerancia), 'minutes');
+				console.debug(
+					`Lunch Start Time: ${lunchStartTime.format("HH:mm:ss")}\n`,
+					`Max Lunch Time: ${MaxLunchTimeDate.format("HH:mm:ss")}\n`,
+					`Max Allowed Time: ${maxAllowedTimeForReturn.format("HH:mm:ss")}\n`,
+					`Min Allowed Time: ${minAllowedTimeForReturn.format("HH:mm:ss")}\n`,
+					`Current Time: ${currentTime.format("HH:mm:ss")}\n`
+				)
 				
 				// Check if the user is trying to clock in after the maximum time
 				if (currentTime.isAfter(maxAllowedTimeForReturn)) {
@@ -252,10 +260,11 @@ export default function HomePage(
 					});
 					setMessageDialogOpen(true);
 					return;
-				} else if (currentTime.isBefore(lunchStartTime)) {
+				} else if (currentTime.isBefore(minAllowedTimeForReturn)) {
+					console.debug(`Hey ${user.name}!\nCalm down big boy, you can't return yet! Go do something else while you wait lmao.`)
 					// Show warning if it's too early to clock in after lunch
 					setDialogMessage({
-						message: `O ponto de retorno do almoço deve ser batido após as ${lunchStartTime.format("HH:mm:ss")}, deseja bater o retorno agora?`,
+						message: `O ponto de retorno do almoço deve ser batido após as ${minAllowedTimeForReturn.format("HH:mm:ss")}, deseja bater o retorno agora?`,
 						type: "bypass-clock-lunch-return",
 						showDefaultCancel: true
 					});
@@ -263,7 +272,7 @@ export default function HomePage(
 					return;
 				}
 				
-				// Proceed with updating user hour data if it's time or past time to clock in after lunch
+				// Proceed with updating user hour data if it's time or if the user wants to skip the validation
 				updateUserHourData(user, time, check, "ClockLunchReturn");
 				return;
 			}
@@ -480,7 +489,7 @@ export default function HomePage(
 								}
 							].map((button, index) => (
 								button.show && (
-									<>
+									<div key={index} className={"flex justify-between w-[50%]"}>
 										{
 											button.release !== "" && button.release === "clock_out" && (
 												<Button
@@ -517,8 +526,7 @@ export default function HomePage(
 												</Button>
 											)
 										}
-									</>
-								
+									</div>
 								)
 							))
 						}
