@@ -5,28 +5,28 @@ import {cn} from '@/lib/utils'
 import React from "react";
 
 const fontHeading = Manrope({
-	subsets: ['latin'],
-	display: 'swap',
-	variable: '--font-heading',
+    subsets: ['latin'],
+    display: 'swap',
+    variable: '--font-heading',
 })
 
 const fontBody = Manrope({
-	subsets: ['latin'],
-	display: 'swap',
-	variable: '--font-body',
-	weight: '400',
+    subsets: ['latin'],
+    display: 'swap',
+    variable: '--font-body',
+    weight: '400',
 })
 
 export default function Layout({children}: { children: React.ReactNode }) {
-	return (
-		<div
-			className={cn(
-				'antialiased',
-				fontHeading.variable,
-				fontBody.variable
-			)}
-		>
-			{children}
-		</div>
-	)
+    return (
+        <div
+            className={cn(
+                'antialiased',
+                fontHeading.variable,
+                fontBody.variable
+            )}
+        >
+            {children}
+        </div>
+    )
 }

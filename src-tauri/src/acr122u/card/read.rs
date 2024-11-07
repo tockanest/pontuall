@@ -218,8 +218,6 @@ pub async fn read_block(
 mod tests {
     use crate::acr122u::reader::connect::reader;
 
-    use super::*;
-
     /// Tests the `read_block` function.
     ///
     /// This test connects to a reader, reads data from a specified block, and prints the data.

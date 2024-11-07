@@ -1,10 +1,12 @@
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
-use tokio::task;
+use tokio::{spawn, task};
 
 
 use crate::cache::set::get_users_and_cache;
-use crate::database::connect::create_db_connection;
+use crate::database::connect::{create_db_connections, SharedDatabases};
+use crate::database::sync::sync_database;
+use crate::misc::ping::check_connection_loop;
 
 pub(crate) struct SetupState {
     pub frontend_task: bool,
@@ -12,17 +14,29 @@ pub(crate) struct SetupState {
 }
 
 async fn setup(app: AppHandle) -> Result<(), ()> {
-    let db_connection = create_db_connection().await.unwrap();
-    app.manage(db_connection.clone());
+    let db_connection = create_db_connections().await.unwrap();
+
+    app.manage::<SharedDatabases>(db_connection);
+
+    spawn(check_connection_loop(app.clone()));
 
     let splash_window = app.get_webview_window("splashscreen").unwrap();
-    app.emit("splashscreen:progress", ("database", true))
+    splash_window.emit("splashscreen:progress", ("database", true))
         .unwrap();
 
-    get_users_and_cache(db_connection).await;
+    get_users_and_cache(app.clone()).await;
     splash_window
         .emit("splashscreen:progress", ("cache", true))
         .unwrap();
+
+    let sync = sync_database(app.clone()).await.map_err(|e| format!("Got error from sync function: {:?}", e));
+
+    match sync {
+        Ok(_) => {}
+        Err(e) => {
+            println!("Sync got an error: {}", e);
+        }
+    }
 
     splash_window
         .emit("splashscreen:progress", ("finish", true))
@@ -65,8 +79,6 @@ pub(crate) async fn complete_setup(
     }
 
     if state_lock.backend_task && state_lock.frontend_task {
-
-
         // Check if webview main already exists
         if app.get_webview_window("main").is_none() {
             println!("Creating main window");

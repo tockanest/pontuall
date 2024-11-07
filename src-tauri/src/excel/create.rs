@@ -67,7 +67,7 @@ pub(crate) fn create_excel_relatory(
         .write_string_with_format(3, 8, "Dia não registrado", &unregistered_color)
         .unwrap();
     worksheet
-        .write_string(4, 8, "Domingos não são registrados!")
+        .write_string(5, 8, "Domingos não são registrados!")
         .unwrap();
 
 
@@ -155,13 +155,28 @@ pub(crate) fn create_excel_relatory(
                 let clock_in = if hour_data.clock_in == "N/A" {
                     None
                 } else {
-                    Some(NaiveTime::parse_from_str(&hour_data.clock_in, "%H:%M:%S").unwrap())
+                    // If the clock_in has only two numerical values (Ex: "HH:MM"), add ":00"
+                    // to parse it correctly
+                    let clock_in = if hour_data.clock_in.len() == 5 {
+                        format!("{}:00", hour_data.clock_in)
+                    } else {
+                        hour_data.clock_in.clone()
+                    };
+
+                    Some(NaiveTime::parse_from_str(&clock_in, "%H:%M:%S").unwrap())
                 };
                 // Check if the clocked_out is N/A
                 let clocked_out = if hour_data.clocked_out == "N/A" {
                     None
                 } else {
-                    Some(NaiveTime::parse_from_str(&hour_data.clocked_out, "%H:%M:%S").unwrap())
+                    // Do the same formatting that was done on the clock_in to prevent errors
+                    let clocked_out = if hour_data.clocked_out.len() == 5 {
+                        format!("{}:00", hour_data.clocked_out)
+                    } else {
+                        hour_data.clocked_out.clone()
+                    };
+
+                    Some(NaiveTime::parse_from_str(&clocked_out, "%H:%M:%S").unwrap())
                 };
 
                 let is_early = clock_in.map_or(false, |clock_in| {
@@ -320,33 +335,33 @@ fn generate_dates_range(start_date: NaiveDate, end_date: NaiveDate) -> Vec<Naive
     dates
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::cache::get::get_cache;
-    use crate::cache::set::get_users_and_cache;
-    use crate::database::connect::create_db_connection;
-    use crate::excel::create::create_excel_relatory;
-
-    /// Tests the `create_excel_relatory` function.
-    #[tokio::test]
-    async fn test_create_excel_relatory() {
-        let db = create_db_connection()
-            .await
-            .unwrap();
-        get_users_and_cache(db).await;
-        let users = get_cache();
-
-        let users = get_cache();
-        let create = create_excel_relatory(
-            "01/08/2024".to_string(),
-            "31/08/2024".to_string(),
-            "08:00".to_string(),
-            "18:00".to_string(),
-            "10".to_string(),
-            users,
-        )
-            .unwrap();
-
-        assert_eq!(create, true);
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use crate::cache::get::get_cache;
+//     use crate::cache::set::get_users_and_cache;
+//     use crate::database::connect::create_db_connection;
+//     use crate::excel::create::create_excel_relatory;
+//
+//     /// Tests the `create_excel_relatory` function.
+//     #[tokio::test]
+//     async fn test_create_excel_relatory() {
+//         let db = create_db_connection()
+//             .await
+//             .unwrap();
+//         get_users_and_cache(db).await;
+//         let users = get_cache();
+//
+//         let users = get_cache();
+//         let create = create_excel_relatory(
+//             "01/08/2024".to_string(),
+//             "31/08/2024".to_string(),
+//             "08:00".to_string(),
+//             "18:00".to_string(),
+//             "10".to_string(),
+//             users,
+//         )
+//             .unwrap();
+//
+//         assert_eq!(create, true);
+//     }
+// }

@@ -10,14 +10,14 @@ pub(crate) fn get_cache() -> HashMap<String, UserExternal> {
         cache_path.push("PontuAll/cache/users");
         cache_path.push("users.json");
 
-        return if cache_path.exists() {
+        if cache_path.exists() {
             let users_json = std::fs::read_to_string(cache_path).unwrap();
             let users_map: HashMap<String, UserExternal> =
                 serde_json::from_str(&users_json).unwrap();
             users_map
         } else {
             HashMap::new()
-        };
+        }
     } else {
         panic!("Failed to get cache path");
     }

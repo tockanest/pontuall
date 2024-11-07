@@ -67,7 +67,7 @@ pub(crate) async fn write_block(
         for i in 0..p {
             let mut block = block_number + 1;
 
-            // Check if block number is 7, 11, 15 and etc, if it is, add +1
+            // Check if block number is 7, 11, 15 etc., if it is, add +1
             if block % 4 == 3 {
                 block += 1;
             }
@@ -208,20 +208,25 @@ mod tests {
 
     use crate::acr122u::reader::connect::reader;
 
-    use super::*;
-
     #[tokio::test]
     async fn test_write_single() {
         let (ctx, reader) = reader().unwrap();
         let cancel_flag = Arc::new(AtomicBool::new(false));
 
         let mut buffer = vec![0; 16];
-        let data = "LvKY0TDcb34hbNeJ";
+        let data = "hOtB6pOxiL2IQPYs".to_string();
         let data_len = data.len();
         let copy_len = std::cmp::min(data_len, buffer.len());
         buffer[..copy_len].copy_from_slice(&data.as_bytes()[..copy_len]);
 
-        let result = write_block(ctx, reader, 5, buffer, Option::from(16), &cancel_flag)
+        let result = write_block(
+            ctx,
+            reader,
+            5,
+            buffer,
+            Option::from(16),
+            &cancel_flag,
+        )
             .await
             .unwrap_or_else(|e| panic!("{:?}", e));
 

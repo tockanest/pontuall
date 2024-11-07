@@ -1,6 +1,5 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+// Prevents an additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-#![warn(unused_extern_crates)]
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
@@ -11,6 +10,7 @@ use crate::acr122u::tauri_commands::{
 };
 use crate::cache::get::get_cache;
 use crate::cache::insert::{gen_id, insert_new_user};
+use crate::cache::set::get_users_and_cache;
 use crate::cache::update::update_cache_hour_data;
 use crate::database::tauri_commands::{check_permission, user_login};
 use crate::excel::create::create_excel_relatory;
@@ -28,6 +28,7 @@ mod misc;
 fn main() {
     let cancel_flag = Arc::new(AtomicBool::new(false));
     let read_in_progress = Arc::new(Mutex::new(false));
+
     let read_state = Arc::new(ReadState {
         cancel_flag,
         read_in_progress,
@@ -70,6 +71,7 @@ fn main() {
             get_cache,
             insert_new_user,
             update_cache_hour_data,
+            get_users_and_cache,
             // Setup / System related
             complete_setup,
             insert_uri,
@@ -80,7 +82,7 @@ fn main() {
             user_login,
             verify,
             // Permissions
-            check_permission
+            check_permission,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

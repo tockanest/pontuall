@@ -4,13 +4,15 @@ use mongodb::bson::doc;
 use mongodb::Collection;
 
 use base64::{engine::general_purpose, Engine as _};
+use futures::AsyncReadExt;
 use serde_json::{json, Value};
 use sha2::Sha256;
 use std::ops::Deref;
 use std::str::FromStr;
+use std::sync::atomic::Ordering;
 use tauri::{AppHandle, Manager};
 
-use crate::database::connect::SharedDatabase;
+use crate::database::connect::SharedDatabases;
 use crate::database::schemas::permission_verify::{PermissionAction, PermissionChecker};
 use crate::database::schemas::user_schema::InternalUserSchema;
 use crate::misc::get::version_name;
@@ -32,39 +34,23 @@ pub(crate) async fn user_login(
     password: String,
     app: AppHandle,
 ) -> Result<Value, String> {
-    let db_connection = app.state::<SharedDatabase>();
-    let db = db_connection.deref().read().await;
-    let collection: Collection<InternalUserSchema> = db.collection("users_internal");
+    let get_db_connection = app.state::<SharedDatabases>();
+    let db_connection = get_db_connection.deref();
 
-    let user = collection
-        .find_one(doc! {"worker_data.email": email})
-        .await
-        .unwrap();
-    if let Some(user) = user {
-        if user.password == user.id && user.password == password {
-            let version = &app.package_info().version;
-            let named_version = version_name(version.to_string());
-            let token = generate_token(
-                user.clone().id,
-                version.to_string(),
-                named_version.clone(),
-                named_version.to_string(),
-            );
+    let db_clone = db_connection.clone();
+    if db_clone.is_online.load(Ordering::SeqCst) {
+        let get_db = db_clone.mongo_db.unwrap();
+        let get_db = get_db.lock().await;
+        let db = get_db.clone().expect("Could not get a MongoDb instance");
+        let db = db.read().await;
+        let collection: Collection<InternalUserSchema> = db.collection("users_internal");
 
-            // frontend expects: {user, token, message, code}
-            Ok(json!({
-                "user": user,
-                "token": token,
-                "message": "Login successful",
-                "code": "200+718"
-            }))
-        } else if user.password != user.id {
-            let parsed_hash = argon2::PasswordHash::new(&user.password).unwrap();
-            let check = argon2::Argon2::default()
-                .verify_password(password.as_ref(), &parsed_hash)
-                .is_ok();
-
-            if check {
+        let user = collection
+            .find_one(doc! {"worker_data.email": email})
+            .await
+            .unwrap();
+        if let Some(user) = user {
+            if user.password == user.id && user.password == password {
                 let version = &app.package_info().version;
                 let named_version = version_name(version.to_string());
                 let token = generate_token(
@@ -76,19 +62,45 @@ pub(crate) async fn user_login(
 
                 // frontend expects: {user, token, message, code}
                 Ok(json!({
+                "user": user,
+                "token": token,
+                "message": "Login successful",
+                "code": "200+718"
+            }))
+            } else if user.password != user.id {
+                let parsed_hash = argon2::PasswordHash::new(&user.password).unwrap();
+                let check = argon2::Argon2::default()
+                    .verify_password(password.as_ref(), &parsed_hash)
+                    .is_ok();
+
+                if check {
+                    let version = &app.package_info().version;
+                    let named_version = version_name(version.to_string());
+                    let token = generate_token(
+                        user.clone().id,
+                        version.to_string(),
+                        named_version.clone(),
+                        named_version.to_string(),
+                    );
+
+                    // frontend expects: {user, token, message, code}
+                    Ok(json!({
                     "user": user,
                     "token": token,
                     "message": "Login successful",
                     "code": "200+718"
                 }))
+                } else {
+                    Err("Invalid password".to_string())
+                }
             } else {
                 Err("Invalid password".to_string())
             }
         } else {
-            Err("Invalid password".to_string())
+            Err("User not found".to_string())
         }
     } else {
-        Err("User not found".to_string())
+        Err("App is offline and cannot login for now.".to_string())
     }
 }
 
@@ -141,17 +153,27 @@ pub(crate) async fn check_permission(
     let action = PermissionAction::from_str(&action).map_err(|_| "Invalid action".to_string())?;
 
     // Convert the permissions string to PermissionsBitField
-    let db_connection = app.state::<SharedDatabase>();
-    let db = db_connection.deref().read().await;
-    let collection: Collection<InternalUserSchema> = db.collection("users_internal");
+    let get_db_connection = app.state::<SharedDatabases>();
+    let db_connection = get_db_connection.deref();
+    let db_clone = db_connection.clone();
 
-    let user = collection.find_one(doc! {"id": id}).await.unwrap();
-    let user = user.ok_or("User not found".to_string())?;
+    if db_clone.is_online.load(Ordering::SeqCst) {
+        let get_db = db_clone.mongo_db.unwrap();
+        let get_db = get_db.lock().await;
+        let db = get_db.clone().expect("Could not get a MongoDb instance");
+        let db = db.read().await;
+        let collection: Collection<InternalUserSchema> = db.collection("users_internal");
 
-    let user_permissions = user.worker_data.permissions;
+        let user = collection.find_one(doc! {"id": id}).await.unwrap();
+        let user = user.ok_or("User not found".to_string())?;
 
-    // Perform the permission check
-    let has_permission = PermissionChecker::check_permission(user_permissions, action);
+        let user_permissions = user.worker_data.permissions;
 
-    Ok(has_permission)
+        // Perform the permission check
+        let has_permission = PermissionChecker::check_permission(user_permissions, action);
+
+        Ok(has_permission)
+    } else {
+        Ok(false)
+    }
 }

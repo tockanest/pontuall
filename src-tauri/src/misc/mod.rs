@@ -6,3 +6,5 @@ pub(crate) mod setup;
 pub(crate) mod token;
 #[macro_use]
 pub(crate) mod set_db_uri;
+
+pub(crate) mod ping;

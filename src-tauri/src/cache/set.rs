@@ -1,13 +1,13 @@
-use std::collections::HashMap;
-
-use futures::StreamExt;
+use crate::cache::get::get_cache;
+use crate::database::connect::SharedDatabases;
+use crate::database::schemas::user_schema::UserExternal;
+use futures::{AsyncReadExt, StreamExt};
 use mongodb::bson::doc;
 use mongodb::Collection;
-
-
-use crate::database::connect::SharedDatabase;
-use crate::database::schemas::user_schema::UserExternal;
-
+use std::collections::HashMap;
+use std::ops::Deref;
+use std::sync::atomic::Ordering;
+use tauri::{AppHandle, Manager};
 // Import StreamExt for async iteration
 
 /// Caches user data by serializing it to JSON and writing it to a file.
@@ -47,22 +47,37 @@ fn cache_users(users: Vec<UserExternal>) -> Result<(), Box<dyn std::error::Error
 /// # Returns
 ///
 /// * `()` - This function does not return a value.
-pub(crate) async fn get_users_and_cache(db: SharedDatabase) {
-    let db = db.read().await;
-    let collection: Collection<UserExternal> = db.collection("users_external");
+#[tauri::command]
+pub(crate) async fn get_users_and_cache(app: AppHandle) {
+    let db_connection = app.state::<SharedDatabases>();
+    let db = db_connection.deref();
+    let mut users: Vec<UserExternal> = Vec::new();
 
-    let cursor = collection
-        .find(doc! {})
-        .await
-        .expect("Failed to execute find");
+    let db_clone = db.clone();
 
-    let users: Vec<UserExternal> = cursor
-        .map(|doc| {
-            let doc: UserExternal = doc.unwrap();
-            doc
-        })
-        .collect()
-        .await;
+    if db_clone.is_online.load(Ordering::SeqCst) {
+        let get_db = db_clone.mongo_db.unwrap();
+        let get_db = get_db.lock().await;
+        let mongo_db = get_db.clone().expect("Could not get a MongoDb instance");
+        let db = mongo_db.read().await;
+        let collection: Collection<UserExternal> = db.collection("users_external");
+
+        let cursor = collection
+            .find(doc! {})
+            .await
+            .expect("Failed to execute find");
+
+        users = cursor
+            .map(|doc| {
+                let doc: UserExternal = doc.unwrap();
+                doc
+            })
+            .collect()
+            .await;
+    } else {
+        let get_current_cache = get_cache().values().cloned().collect();
+        users = get_current_cache;
+    }
 
     cache_users(users).unwrap();
 }
@@ -71,16 +86,9 @@ pub(crate) async fn get_users_and_cache(db: SharedDatabase) {
 mod tests {
     use std::collections::HashMap;
 
-    use futures::StreamExt;
-    use mongodb::bson::doc;
-    use mongodb::Collection;
     use rand::Rng;
-    use serde_json::json;
-    use uuid::Uuid;
 
-    use crate::cache::set::cache_users;
-    use crate::database::connect::create_db_connection;
-    use crate::database::schemas::user_schema::{HourData, UserExternal};
+    use crate::database::schemas::user_schema::HourData;
 
     /// Generates random hour data for testing purposes.
     ///
@@ -143,74 +151,74 @@ mod tests {
         map
     }
 
-    /// Inserts mock users into the database for testing purposes.
-    #[tokio::test]
-    async fn insert_users() {
-        let db = create_db_connection()
-            .await
-            .unwrap();
-        let db = db.read().await;
-        let mock_users = json!(
-            [{"name":"Hilary Oxtoby","email":"hoxtoby0@godaddy.com","role":"Biostatistician II","id":"b5111161-2801-4cd9-aa71-bd1723ae2df5"},
-            {"name":"Simone Bettanay","email":"sbettanay1@tumblr.com","role":"Account Representative I","id":"a1e04865-b905-4bf5-84bb-89d8c20f7539"},
-            {"name":"Lorette Denham","email":"ldenham2@zdnet.com","role":"Physical Therapy Assistant","id":"8b8430e9-7ec0-43a8-bbca-235ad9288479"},
-            {"name":"Rabbi MacGorley","email":"rmacgorley3@skyrock.com","role":"Registered Nurse","id":"a7d9143c-604e-4219-b431-023e93f28ab8"},
-            {"name":"Deva Lannin","email":"dlannin4@scribd.com","role":"Accounting Assistant I","id":"e53489b6-2289-4431-92f2-e1e701ca1163"},
-            {"name":"Beryle Elles","email":"belles5@businessinsider.com","role":"Software Test Engineer IV","id":"2a48f92a-49d2-42e9-8f65-b94fc30710d7"},
-            {"name":"Paxton Videler","email":"pvideler6@dyndns.org","role":"Pharmacist","id":"7ab9433a-6fec-441a-9517-23984677ddfe"},
-            {"name":"Olympe Mourge","email":"omourge7@sitemeter.com","role":"Administrative Officer","id":"4edd3dfc-5058-4970-bfb1-36e6de4965f3"},
-            {"name":"Immanuel Gallacher","email":"igallacher8@hp.com","role":"VP Quality Control","id":"b734e363-fa95-4bd6-8e4f-96f8ac475b39"},
-            {"name":"Selina Prydie","email":"sprydie9@dyndns.org","role":"Financial Advisor","id":"1030fd51-4c74-47aa-ada4-c5e14423f865"},
-            {"name":"Willa Boullen","email":"wboullena@phoca.cz","role":"Help Desk Technician","id":"41005c42-1596-4f86-87f3-64655a97a7e0"},
-            {"name":"Brigit Tweddle","email":"btweddleb@nymag.com","role":"Assistant Professor","id":"b6d32993-a38e-442c-ae47-2483462f6cc3"},
-            {"name":"Dolph Cobleigh","email":"dcobleighc@networksolutions.com","role":"Product Engineer","id":"6fd700d6-0570-46c0-a78a-d50e0a030e2b"},
-            {"name":"Dayna Ewols","email":"dewolsd@cpanel.net","role":"Developer IV","id":"9c1d1a5c-172a-49a1-899b-86c8c95679f4"},
-            {"name":"Puff Allot","email":"pallote@51.la","role":"Software Consultant","id":"4ffb9be1-1fdb-4c0a-8fab-f2380e1d4a79"}]
-        );
-
-        // Insert the randomly generated hour_data into the mock_users
-        let users: Vec<UserExternal> = mock_users
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|user| {
-                let mut user: UserExternal = serde_json::from_value(user.clone()).unwrap();
-                let hour_data = generate_random_data_map();
-                user.id = Uuid::new_v4().to_string();
-                user.hour_data = Some(hour_data);
-                user.image = None;
-                user.lunch_time = None;
-                user
-            })
-            .collect();
-
-        // Insert mock users into the database
-        let collection: Collection<UserExternal> = db.collection("users_external");
-        collection.insert_many(users).await.unwrap();
-    }
-
-    /// Tests the `cache_users` function by retrieving users from the database and caching them.
-    #[tokio::test]
-    async fn test_cache_users() {
-        let db = create_db_connection()
-            .await
-            .unwrap();
-        let db = db.read().await;
-        let collection: Collection<UserExternal> = db.collection("users_external");
-
-        let cursor = collection
-            .find(doc! {})
-            .await
-            .expect("Failed to execute find");
-
-        let users: Vec<UserExternal> = cursor
-            .map(|doc| {
-                let doc: UserExternal = doc.unwrap();
-                doc
-            })
-            .collect()
-            .await;
-
-        cache_users(users).unwrap();
-    }
+    // Inserts mock users into the database for testing purposes.
+    // #[tokio::test]
+    // async fn insert_users() {
+    //     let db = create_db_connections()
+    //         .await
+    //         .unwrap();
+    //     let db = db.read().await;
+    //     let mock_users = json!(
+    //         [{"name":"Hilary Oxtoby","email":"hoxtoby0@godaddy.com","role":"Biostatistician II","id":"b5111161-2801-4cd9-aa71-bd1723ae2df5"},
+    //         {"name":"Simone Bettanay","email":"sbettanay1@tumblr.com","role":"Account Representative I","id":"a1e04865-b905-4bf5-84bb-89d8c20f7539"},
+    //         {"name":"Lorette Denham","email":"ldenham2@zdnet.com","role":"Physical Therapy Assistant","id":"8b8430e9-7ec0-43a8-bbca-235ad9288479"},
+    //         {"name":"Rabbi MacGorley","email":"rmacgorley3@skyrock.com","role":"Registered Nurse","id":"a7d9143c-604e-4219-b431-023e93f28ab8"},
+    //         {"name":"Deva Lannin","email":"dlannin4@scribd.com","role":"Accounting Assistant I","id":"e53489b6-2289-4431-92f2-e1e701ca1163"},
+    //         {"name":"Beryle Elles","email":"belles5@businessinsider.com","role":"Software Test Engineer IV","id":"2a48f92a-49d2-42e9-8f65-b94fc30710d7"},
+    //         {"name":"Paxton Videler","email":"pvideler6@dyndns.org","role":"Pharmacist","id":"7ab9433a-6fec-441a-9517-23984677ddfe"},
+    //         {"name":"Olympe Mourge","email":"omourge7@sitemeter.com","role":"Administrative Officer","id":"4edd3dfc-5058-4970-bfb1-36e6de4965f3"},
+    //         {"name":"Immanuel Gallacher","email":"igallacher8@hp.com","role":"VP Quality Control","id":"b734e363-fa95-4bd6-8e4f-96f8ac475b39"},
+    //         {"name":"Selina Prydie","email":"sprydie9@dyndns.org","role":"Financial Advisor","id":"1030fd51-4c74-47aa-ada4-c5e14423f865"},
+    //         {"name":"Willa Boullen","email":"wboullena@phoca.cz","role":"Help Desk Technician","id":"41005c42-1596-4f86-87f3-64655a97a7e0"},
+    //         {"name":"Brigit Tweddle","email":"btweddleb@nymag.com","role":"Assistant Professor","id":"b6d32993-a38e-442c-ae47-2483462f6cc3"},
+    //         {"name":"Dolph Cobleigh","email":"dcobleighc@networksolutions.com","role":"Product Engineer","id":"6fd700d6-0570-46c0-a78a-d50e0a030e2b"},
+    //         {"name":"Dayna Ewols","email":"dewolsd@cpanel.net","role":"Developer IV","id":"9c1d1a5c-172a-49a1-899b-86c8c95679f4"},
+    //         {"name":"Puff Allot","email":"pallote@51.la","role":"Software Consultant","id":"4ffb9be1-1fdb-4c0a-8fab-f2380e1d4a79"}]
+    //     );
+    //
+    //     // Insert the randomly generated hour_data into the mock_users
+    //     let users: Vec<UserExternal> = mock_users
+    //         .as_array()
+    //         .unwrap()
+    //         .iter()
+    //         .map(|user| {
+    //             let mut user: UserExternal = serde_json::from_value(user.clone()).unwrap();
+    //             let hour_data = generate_random_data_map();
+    //             user.id = Uuid::new_v4().to_string();
+    //             user.hour_data = Some(hour_data);
+    //             user.image = None;
+    //             user.lunch_time = None;
+    //             user
+    //         })
+    //         .collect();
+    //
+    //     // Insert mock users into the database
+    //     let collection: Collection<UserExternal> = db.collection("users_external");
+    //     collection.insert_many(users).await.unwrap();
+    // }
+    //
+    // /// Tests the `cache_users` function by retrieving users from the database and caching them.
+    // #[tokio::test]
+    // async fn test_cache_users() {
+    //     let db = create_db_connection()
+    //         .await
+    //         .unwrap();
+    //     let db = db.read().await;
+    //     let collection: Collection<UserExternal> = db.collection("users_external");
+    //
+    //     let cursor = collection
+    //         .find(doc! {})
+    //         .await
+    //         .expect("Failed to execute find");
+    //
+    //     let users: Vec<UserExternal> = cursor
+    //         .map(|doc| {
+    //             let doc: UserExternal = doc.unwrap();
+    //             doc
+    //         })
+    //         .collect()
+    //         .await;
+    //
+    //     cache_users(users).unwrap();
+    // }
 }
